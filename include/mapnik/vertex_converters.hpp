@@ -253,6 +253,28 @@ struct converter_traits<T,mapnik::offset_transform_tag>
         auto const& vars = args.vars;
         double offset = get<value_double, keys::offset>(sym, feat, vars);
         geom.set_offset(offset * args.scale_factor);
+	
+	geom.set_proj_trans(args.prj_trans);
+        geom.set_trans(args.tr);
+	bool there_is_one_previous_offset = get<value_bool, keys::there_is_one_previous_offset>(sym, feat, vars);
+	auto previous_offset = get_optional<double>(sym, keys::previous_offset, feat, vars);
+	auto before_first_point_x = get_optional<double>(sym, keys::before_first_point_x, feat, vars);
+	auto before_first_point_y = get_optional<double>(sym, keys::before_first_point_y, feat, vars);
+	if (there_is_one_previous_offset)
+	  {
+	    geom.set_previous_offset(*previous_offset * args.scale_factor, *before_first_point_x, *before_first_point_y);
+	  }
+	bool there_is_one_following_offset = get<value_bool, keys::there_is_one_following_offset>(sym, feat, vars);
+	auto following_offset = get_optional<double>(sym, keys::following_offset, feat, vars);
+	auto after_last_point_x = get_optional<double>(sym, keys::after_last_point_x, feat, vars);
+	auto after_last_point_y = get_optional<double>(sym, keys::after_last_point_y, feat, vars);
+	if (there_is_one_following_offset)
+	  {
+	    geom.set_following_offset(*following_offset * args.scale_factor, *after_last_point_x, *after_last_point_y);
+	  }
+	bool see_all_offset_strokes = get<value_bool, keys::see_all_offset_strokes>(sym, feat, vars);
+	geom.set_see_all_offset_strokes(see_all_offset_strokes);
+
     }
 };
 

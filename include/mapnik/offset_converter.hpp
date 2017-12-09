@@ -31,6 +31,9 @@
 #include <mapnik/vertex.hpp>
 #include <mapnik/vertex_cache.hpp>
 
+#include <mapnik/proj_transform.hpp>
+#include <mapnik/view_transform.hpp>
+
 // stl
 #include <cmath>
 #include <vector>
@@ -54,6 +57,21 @@ struct offset_converter
         , pre_first_(vertex2d::no_init)
         , pre_(vertex2d::no_init)
         , cur_(vertex2d::no_init)
+	  
+        , prj_trans_(0)
+        , t_(0)
+	  
+        , there_is_previous_offset_(false)
+        , previous_offset_()
+        , before_first_point_x_()
+        , before_first_point_y_()
+	  
+        , there_is_following_offset_(false)
+        , following_offset_()
+        , after_last_point_x_()
+        , after_last_point_y_() 
+	  
+        , show_all_offset_strokes_(false)
     {}
 
     enum status
@@ -93,7 +111,38 @@ struct offset_converter
         // offset vertices' computation, it only controls how
         // far will we be looking for self-intersections
     }
-
+    
+    void set_previous_offset(double previous_offset, double x, double y)
+    {
+      there_is_previous_offset_ = true;
+      previous_offset_ = previous_offset;
+      before_first_point_x_ = x;
+      before_first_point_y_ = y;
+    }
+    
+    void set_following_offset(double following_offset, double x, double y)
+    {
+      there_is_following_offset_ = true;
+      following_offset_ = following_offset;
+      after_last_point_x_ = x;
+      after_last_point_y_ = y;
+    }
+    
+    void set_proj_trans(proj_transform const& prj_trans)
+    {
+        prj_trans_ = &prj_trans;
+    }
+    
+    void set_trans(view_transform const& t)
+    {
+        t_ = &t;
+    }
+    
+    void set_show_all_offset_strokes(bool b)
+    {
+      show_all_offset_strokes_ = b;
+    }
+  
     unsigned vertex(double * x, double * y)
     {
         if (offset_ == 0.0)
@@ -126,8 +175,11 @@ struct offset_converter
 
         for (size_t i = pos_; i+1 < vertices_.size(); ++i)
         {
-            //break; // uncomment this to see all the curls
-
+	  if (show_all_offset_strokes_)
+	    {
+	      break; // uncomment this to see all the curls
+	    }
+	    
             vertex2d const& u0 = vertices_[i];
             vertex2d const& u1 = vertices_[i+1];
             double const dx = u0.x - cur_.x;
@@ -331,8 +383,44 @@ private:
         }
     }
 
-    status init_vertices()
+  status init_vertices()
     {
+        //if (show_all_offset_strokes_) std::cerr << "init_vertices : there_is_previous_offset_ = " << there_is_previous_offset_ << " ; there_is_following_offset_ = " << there_is_following_offset_ << std::endl;
+        double main_offset = offset_;
+	double main_angle = 0.0;
+	double previous_main_angle = 0.0;
+	
+	bool doing__before_first_stroke = false;
+	vertex2d before_first_point(vertex2d::no_init);
+        if (there_is_previous_offset_)
+	  {
+	    doing__before_first_stroke = true;
+	    double before_first_point_x = before_first_point_x_;
+	    double before_first_point_y = before_first_point_y_;
+	    double z = 0;
+	    prj_trans_->backward(before_first_point_x, before_first_point_y, z);
+	    t_->forward(&before_first_point_x, &before_first_point_y);
+	    before_first_point.x = before_first_point_x;
+	    before_first_point.y = before_first_point_y;
+	    before_first_point.cmd = SEG_MOVETO;
+	    //if (show_all_offset_strokes_) std::cerr << "before_first_point : cmd =" << before_first_point.cmd << " x = " << before_first_point.x << " y = " << before_first_point.y << std::endl;
+	  }
+        
+	bool doing__after_last_stroke = false;
+	vertex2d after_last_point(vertex2d::no_init);	
+	if (there_is_following_offset_)
+	  {
+	    double after_last_point_x = after_last_point_x_;
+	    double after_last_point_y = after_last_point_y_;
+	    double z = 0;
+	    prj_trans_->backward(after_last_point_x, after_last_point_y, z);
+	    t_->forward(&after_last_point_x, &after_last_point_y);
+	    after_last_point.x = after_last_point_x;
+	    after_last_point.y = after_last_point_y;
+	    after_last_point.cmd = SEG_LINETO;
+	    //if (show_all_offset_strokes_) std::cerr << "after_last_point : cmd =" << after_last_point.cmd << " x = " << after_last_point.x << " y = " << after_last_point.y << std::endl;
+	  }
+	
         if (status_ != initial) // already initialized
         {
             return status_;
@@ -347,7 +435,11 @@ private:
         std::vector<vertex2d> close_points;
         bool is_polygon = false;
         std::size_t cpt = 0;
-        v0.cmd = geom_.vertex(&v0.x, &v0.y);
+	if (doing__before_first_stroke)
+	  {
+	    points.push_back(before_first_point);
+	  }
+	v0.cmd = geom_.vertex(&v0.x, &v0.y);
         v1 = v0;
         // PUSH INITIAL
         points.push_back(v0);
@@ -385,19 +477,33 @@ private:
             points.push_back(v0);
         }
         // Push SEG_END
-        points.push_back(vertex2d(v0.x,v0.y,SEG_END));
+	if (there_is_following_offset_)
+	  {
+	    points.push_back(after_last_point);
+	    points.push_back(vertex2d(after_last_point.x,after_last_point.y,SEG_END));
+	  }
+	else
+	  {
+	    points.push_back(vertex2d(v0.x,v0.y,SEG_END));
+	  }
         std::size_t i = 0;
-        v1 = points[i++];
-        v2 = points[i++];
+	v1 = points[i++];
+	v2 = points[i++];
+	/*if (show_all_offset_strokes_)
+	  {
+	    std::cerr << "étape 'pré-boucle' : v1.cmd =" << v1.cmd << " x = " << v1.x << " y = " << v1.y << std::endl;
+	    std::cerr << "                     v2.cmd =" << v2.cmd << " x = " << v2.x << " y = " << v2.y << std::endl;
+	    std::cerr << "                     doing__before_first_stroke = " << doing__before_first_stroke << std::endl;
+	    }*/
         v0.cmd = v1.cmd;
         v0.x = v1.x;
         v0.y = v1.y;
-
+	
         if (v2.cmd == SEG_END) // not enough vertices in source
         {
             return status_ = process;
         }
-
+	
         double angle_a = 0;
         // The vector parts from v1 to v0.
         double v_x1x0 = 0;
@@ -405,7 +511,7 @@ private:
         // The vector parts from v1 to v2;
         double v_x1x2 = v2.x - v1.x;
         double v_y1y2 = v2.y - v1.y;
-
+	
         if (is_polygon)
         {
             v_x1x0 = close_points[cpt].x - v1.x;
@@ -421,7 +527,13 @@ private:
         // Angle between the two vectors
         double joint_angle;
         double curve_angle;
-
+	
+	if (doing__before_first_stroke)
+	  {
+	    offset_ = previous_offset_;
+	    v2.cmd = SEG_LINETO;
+	  }
+	
         if (!is_polygon)
         {
             // first vertex
@@ -432,7 +544,7 @@ private:
         {
             dot = v_x1x0 * v_x1x2 + v_y1y0 * v_y1y2;      // dot product
             det = v_x1x0 * v_y1y2 - v_y1y0 * v_x1x2;      // determinant
-
+	    
             joint_angle = std::atan2(det, dot);  // atan2(y, x) or atan2(sin, cos)
             if (joint_angle < 0) joint_angle = joint_angle + 2 * M_PI;
             joint_angle = std::fmod(joint_angle, 2 * M_PI);
@@ -463,7 +575,7 @@ private:
                 push_vertex(v1);
             }
         }
-
+	
         // Sometimes when the first segment is too short, it causes ugly
         // curls at the beginning of the line. To avoid this, we make up
         // a fake vertex two offset-lengths before the first, and expect
@@ -471,7 +583,7 @@ private:
         if (!is_polygon)
         {
             pre_first_ = v1;
-            displace(pre_first_, -2 * std::fabs(offset_), 0, angle_b);
+            displace(pre_first_, -2 * std::max(std::fabs(offset_), std::fabs(main_offset)), 0, angle_b);
             start_ = pre_first_;
         }
         else
@@ -481,13 +593,29 @@ private:
         }
         start_v2.x = v2.x;
         start_v2.y = v2.y;
-
+        bool continue_loop = true;        
         vertex2d tmp_prev(vertex2d::no_init);
-
+	
+	int bulge_steps = 0;
+	
         while (i < points.size())
-        {
+	  {
+	    //if (show_all_offset_strokes_) std::cerr << "while loop : i =" << i << " ; offset = " << offset_ << std::endl; // according to vertex.hpp : SEG_END = 0, SEG_MOVETO = 1, SEG_LINETO = 2, SEG_CLOSE = (0x40 | 0x0f)
             v1 = v2;
-            v2 = points[i++];
+	    v2 = points[i++];
+	    /*if (show_all_offset_strokes_) 
+	      {
+		std::cerr << "               v1.cmd =" << v1.cmd << " ; x = " << v1.x << ", y = " << v1.y << std::endl;
+		std::cerr << "               v2.cmd =" << v2.cmd << " ; x = " << v2.x << ", y = " << v2.y << std::endl;
+		}*/
+	    
+	    if ( there_is_following_offset_ && (i == (points.size()-1)) )
+	      {
+		// v1 = the last "real" point of the geometry -> to be taken into account after the loop in "last vertex" if no after last point
+		doing__after_last_stroke = true; // stroke between v1, the last "real" point of the geometry, and the after last point
+		//if (show_all_offset_strokes_) std::cerr << "              doing__after_last_stroke" << std::endl;
+	      }
+	    
             if (v1.cmd == SEG_MOVETO)
             {
                 if (is_polygon)
@@ -514,6 +642,7 @@ private:
             else if (v2.cmd == SEG_END)
             {
                 if (!is_polygon) break;
+                continue_loop = false;
                 v2.x = start_v2.x;
                 v2.y = start_v2.y;
             }
@@ -522,33 +651,34 @@ private:
                 v2.x = start_.x;
                 v2.y = start_.y;
             }
-
+	    
             // Switch the previous vector's direction as the origin has changed
             v_x1x0 = -v_x1x2;
             v_y1y0 = -v_y1y2;
             // Calculate new angle_a
             angle_a = std::atan2(v_y1y2, v_x1x2);
-
+	    
             // Calculate the new vector
             v_x1x2 = v2.x - v1.x;
             v_y1y2 = v2.y - v1.y;
             // Calculate the new angle_b
             angle_b = std::atan2(v_y1y2, v_x1x2);
-
+	    
             dot = v_x1x0 * v_x1x2 + v_y1y0 * v_y1y2;      // dot product
             det = v_x1x0 * v_y1y2 - v_y1y0 * v_x1x2;      // determinant
-
+	    
             joint_angle = std::atan2(det, dot);  // atan2(y, x) or atan2(sin, cos)
             if (joint_angle < 0) joint_angle = joint_angle + 2 * M_PI;
             joint_angle = std::fmod(joint_angle, 2 * M_PI);
-
+	    
             if (offset_ > 0.0)
             {
                 joint_angle = 2 * M_PI - joint_angle;
             }
-
-            int bulge_steps = 0;
-
+	    
+            //int bulge_steps = 0;
+	    bulge_steps = 0;
+	    
             if (std::abs(joint_angle) > M_PI)
             {
                 curve_angle = explement_reflex_angle(angle_b - angle_a);
@@ -556,7 +686,7 @@ private:
                 double half_turns = half_turn_segments_ * std::fabs(curve_angle);
                 bulge_steps = 1 + static_cast<int>(std::floor(half_turns / M_PI));
             }
-
+	    
             #ifdef MAPNIK_LOG
             if (bulge_steps == 0)
             {
@@ -576,16 +706,21 @@ private:
             tmp_prev.cmd = v1.cmd;
             tmp_prev.x = v1.x;
             tmp_prev.y = v1.y;
-
+	    
+	    previous_main_angle = main_angle;
+	    main_angle = std::fabs(explement_reflex_angle(M_PI - angle_b + angle_a));
+	    
             if (v1.cmd == SEG_MOVETO)
             {
                 if (bulge_steps == 0)
-                {
-                    displace2(v1, v0, v2, angle_a, angle_b);
-                    push_vertex(v1);
+		{
+		    //if (show_all_offset_strokes_) std::cerr << "v1.cmd == SEG_MOVETO + bulge_steps = 0" << std::endl;
+		    displace2(v1, v0, v2, angle_a, angle_b);
+		    push_vertex(v1);
                 }
                 else
                 {
+		    //if (show_all_offset_strokes_) std::cerr << "v1.cmd == SEG_MOVETO + bulge_steps > 0" << std::endl;
                     displace(v1, angle_b);
                     push_vertex(v1);
                 }
@@ -594,11 +729,50 @@ private:
             {
                 if (bulge_steps == 0)
                 {
-                    displace2(v1, v0, v2, angle_a, angle_b);
-                    push_vertex(v1);
+		    //if (show_all_offset_strokes_) std::cerr << "v1.cmd == SEG_LINETO + bulge_steps == 0 + doing__before_first_stroke=" << doing__before_first_stroke << " + doing__after_last_stroke=" << doing__after_last_stroke << " ; angle_a = " << angle_a << " ; angle_b = " << angle_b << " ; main_angle = " << main_angle << std::endl;
+		    displace2(v1, v0, v2, angle_a, angle_b); // with the "previous" offset : main-offset in the general case and while "doing__after_last_stroke", previous-offset while 'doing__before_first_stroke'
+		    // then, with offset = "following" offset - "previous" offset : while "doing__after_last_stroke", following-offset - main-offset, while 'doing__before_first_stroke', main-offset - previous-offset (no general case)
+		    push_vertex(v1);
+		    if (doing__after_last_stroke) 
+		    {
+		      offset_ = following_offset_ - main_offset;
+		      displace2(v1, v0, v2, angle_a, angle_b);
+		      push_vertex(v1);
+		      offset_ = following_offset_;
+		    }
+		    else if (doing__before_first_stroke)
+		    {
+		      offset_ = main_offset - previous_offset_;
+		      displace2(v1, v0, v2, angle_a, angle_b);
+		      push_vertex(v1);
+		      offset_ = main_offset;
+		      doing__before_first_stroke = false;
+		    }
                 }
-                else
-                {
+                else if (doing__before_first_stroke)
+		  {
+		    //if (show_all_offset_strokes_) std::cerr << "v1.cmd == SEG_LINETO + bulge_steps > 0 + doing__before_first_stroke" << " ; angle_a = " << angle_a << " ; angle_b = " << angle_b << " ; main_angle = " << main_angle << std::endl;
+		    displace(w, v1, angle_a);
+		    w.cmd = SEG_LINETO;
+		    push_vertex(w);
+		    offset_ = main_offset;
+		    doing__before_first_stroke = false;
+                    displace(v1, angle_b);
+                    push_vertex(v1);
+		  }
+                else if (doing__after_last_stroke)
+		  {
+		    //if (show_all_offset_strokes_) std::cerr << "v1.cmd == SEG_LINETO + bulge_steps > 0 + doing__after_last_stroke" << " ; angle_a = " << angle_a << " ; angle_b = " << angle_b << " ; main_angle = " << main_angle << std::endl;
+		    displace(w, v1, angle_a);
+		    w.cmd = SEG_LINETO;
+		    push_vertex(w);
+		    offset_ = following_offset_;
+                    displace(v1, angle_b);
+                    push_vertex(v1);
+		  }
+		else
+		{
+		    //if (show_all_offset_strokes_) std::cerr << "v1.cmd == SEG_LINETO + bulge_steps > 0" << std::endl;
                     displace(w, v1, angle_a);
                     w.cmd = SEG_LINETO;
                     push_vertex(w);
@@ -614,18 +788,33 @@ private:
             }
             v0.cmd = tmp_prev.cmd;
             v0.x = tmp_prev.x;
-            v0.y = tmp_prev.y;
-        }
-
+            v0.y = tmp_prev.y;	
+	} // end of the while
+	
         // last vertex
-        if (!is_polygon)
+	if (!is_polygon)
         {
             displace(v1, angle_b);
             push_vertex(v1);
         }
+	if (doing__after_last_stroke) // probably harmless
+	  {
+	    offset_ = main_offset;
+	    doing__after_last_stroke = false;
+	  }
+	// to compute "self-intersections"
+	if (there_is_previous_offset_)
+	  {
+	    offset_ = std::max(std::abs(offset_), std::abs(previous_offset_));
+	  }
+	if (there_is_following_offset_)
+	  {
+	    offset_ = std::max(std::abs(offset_), std::abs(following_offset_));
+	  }
         // initialization finished
         return status_ = process;
     }
+
 
     unsigned output_vertex(double* px, double* py)
     {
@@ -654,6 +843,21 @@ private:
     vertex2d                pre_first_;
     vertex2d                pre_;
     vertex2d                cur_;
+    
+    proj_transform const* prj_trans_;
+    view_transform const* t_;
+    
+    bool there_is_previous_offset_;
+    double previous_offset_;
+    double before_first_point_x_;
+    double before_first_point_y_;
+    
+    bool there_is_following_offset_; 
+    double following_offset_;
+    double after_last_point_x_;
+    double after_last_point_y_;
+    
+    bool show_all_offset_strokes_;
 };
 
 }

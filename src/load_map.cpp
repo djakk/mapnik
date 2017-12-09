@@ -1274,6 +1274,17 @@ void map_parser::parse_line_symbolizer(rule & rule, xml_node const & node)
         parse_symbolizer_base(sym, node);
         parse_stroke(sym, node);
         set_symbolizer_property<symbolizer_base,double>(sym, keys::offset, node);
+	
+	set_symbolizer_property<symbolizer_base,value_bool>(sym, keys::il_y_a_un_offset_precedent, node);
+	set_symbolizer_property<symbolizer_base,value_bool>(sym, keys::il_y_a_un_offset_suivant, node);
+        set_symbolizer_property<symbolizer_base,double>(sym, keys::offset_precedent, node);
+	set_symbolizer_property<symbolizer_base,double>(sym, keys::offset_suivant, node);
+        set_symbolizer_property<symbolizer_base,double>(sym, keys::avant_premier_point_x, node);
+        set_symbolizer_property<symbolizer_base,double>(sym, keys::avant_premier_point_y, node);
+        set_symbolizer_property<symbolizer_base,double>(sym, keys::apres_dernier_point_x, node);
+        set_symbolizer_property<symbolizer_base,double>(sym, keys::apres_dernier_point_y, node);
+	set_symbolizer_property<symbolizer_base,value_bool>(sym, keys::voir_tous_les_traits, node);
+	
         set_symbolizer_property<symbolizer_base,line_rasterizer_enum>(sym, keys::line_rasterizer, node);
         rule.append(std::move(sym));
     }

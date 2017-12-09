@@ -33,7 +33,19 @@ enum class keys : std::uint8_t
     gamma_method,
     opacity,
     alignment,
+    
     offset,
+    
+    there_is_one_previous_offset, 
+    there_is_one_following_offset, 
+    previous_offset, 
+    following_offset, 
+    before_first_point_x, 
+    before_first_point_y, 
+    after_last_point_x, 
+    after_last_point_y, 
+    see_all_offset_strokes, 
+    
     comp_op,
     clip,
     fill,

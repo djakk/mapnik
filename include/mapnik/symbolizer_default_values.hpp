@@ -74,6 +74,22 @@ struct symbolizer_default<value_double, keys::offset>
     static value_double value() { return 0.0; }
 };
 
+template <>
+struct symbolizer_default<value_bool, keys::there_is_one_previous_offset>
+{
+    static value_bool value() { return false; }
+};
+template <>
+struct symbolizer_default<value_bool, keys::there_is_one_following_offset>
+{
+    static value_bool value() { return false; }
+};
+template <>
+struct symbolizer_default<value_bool, keys::see_all_offset_strokes>
+{
+    static value_bool value() { return false; }
+};
+
 // comp-op
 template <>
 struct symbolizer_default<composite_mode_e, keys::comp_op>
