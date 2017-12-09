@@ -135,6 +135,19 @@ void agg_renderer<T0,T1>::process(line_symbolizer const& sym,
     value_double width = get<value_double, keys::stroke_width>(sym, feature, common_.vars_);
     value_double opacity = get<value_double,keys::stroke_opacity>(sym,feature, common_.vars_);
     value_double offset = get<value_double, keys::offset>(sym, feature, common_.vars_);
+    //value_double offset_precedent = get<value_double, keys::offset_precedent>(sym, feature, common_.vars_);
+    //value_double offset_suivant = get<value_double, keys::offset_suivant>(sym, feature, common_.vars_);
+    /*auto offset_precedent = get_optional<double>(sym, keys::offset_precedent, feature, common_.vars_);
+    if (offset_precedent)
+      {
+	std::cerr << "process(line_symbolizer) : offset_precedent : oui = " << offset_precedent << std::endl;
+	double offset_precedent_2 = *offset_precedent;
+	std::cerr << "process(line_symbolizer) : offset_precedent : oui = " << offset_precedent_2 << std::endl;
+      }
+    else
+      {
+	std::cerr << "process(line_symbolizer) : offset_precedent : non. " << std::endl;
+      }*/
     value_double simplify_tolerance = get<value_double, keys::simplify_tolerance>(sym, feature, common_.vars_);
     value_double smooth = get<value_double, keys::smooth>(sym, feature, common_.vars_);
     line_rasterizer_enum rasterizer_e = get<line_rasterizer_enum, keys::line_rasterizer>(sym, feature, common_.vars_);
