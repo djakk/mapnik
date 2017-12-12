@@ -928,6 +928,8 @@ void map_parser::parse_symbolizer_base(symbolizer_base &sym, xml_node const& nod
     set_symbolizer_property<symbolizer_base,transform_type>(sym, keys::geometry_transform, node);
     set_symbolizer_property<symbolizer_base,simplify_algorithm_e>(sym, keys::simplify_algorithm, node);
     set_symbolizer_property<symbolizer_base,double>(sym, keys::extend, node);
+    
+    set_symbolizer_property<symbolizer_base,value_bool>(sym, keys::block_unchosen_placement, node);
 }
 
 void map_parser::parse_point_symbolizer(rule & rule, xml_node const & node)
@@ -1275,15 +1277,15 @@ void map_parser::parse_line_symbolizer(rule & rule, xml_node const & node)
         parse_stroke(sym, node);
         set_symbolizer_property<symbolizer_base,double>(sym, keys::offset, node);
 	
-	set_symbolizer_property<symbolizer_base,value_bool>(sym, keys::il_y_a_un_offset_precedent, node);
-	set_symbolizer_property<symbolizer_base,value_bool>(sym, keys::il_y_a_un_offset_suivant, node);
-        set_symbolizer_property<symbolizer_base,double>(sym, keys::offset_precedent, node);
-	set_symbolizer_property<symbolizer_base,double>(sym, keys::offset_suivant, node);
-        set_symbolizer_property<symbolizer_base,double>(sym, keys::avant_premier_point_x, node);
-        set_symbolizer_property<symbolizer_base,double>(sym, keys::avant_premier_point_y, node);
-        set_symbolizer_property<symbolizer_base,double>(sym, keys::apres_dernier_point_x, node);
-        set_symbolizer_property<symbolizer_base,double>(sym, keys::apres_dernier_point_y, node);
-	set_symbolizer_property<symbolizer_base,value_bool>(sym, keys::voir_tous_les_traits, node);
+	set_symbolizer_property<symbolizer_base,value_bool>(sym, keys::there_is_one_previous_offset, node);
+	set_symbolizer_property<symbolizer_base,value_bool>(sym, keys::there_is_one_following_offset, node);
+        set_symbolizer_property<symbolizer_base,double>(sym, keys::previous_offset, node);
+	set_symbolizer_property<symbolizer_base,double>(sym, keys::following_offset, node);
+        set_symbolizer_property<symbolizer_base,double>(sym, keys::before_first_point_x, node);
+        set_symbolizer_property<symbolizer_base,double>(sym, keys::before_first_point_y, node);
+        set_symbolizer_property<symbolizer_base,double>(sym, keys::after_last_point_x, node);
+        set_symbolizer_property<symbolizer_base,double>(sym, keys::after_last_point_y, node);
+	set_symbolizer_property<symbolizer_base,value_bool>(sym, keys::show_all_offset_strokes, node);
 	
         set_symbolizer_property<symbolizer_base,line_rasterizer_enum>(sym, keys::line_rasterizer, node);
         rule.append(std::move(sym));

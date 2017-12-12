@@ -63,6 +63,9 @@ evaluated_text_properties_ptr evaluate_text_properties(text_symbolizer_propertie
     prop->allow_overlap = util::apply_visitor(extract_value<value_bool>(feature,attrs), text_prop.expressions.allow_overlap);
     prop->largest_bbox_only = util::apply_visitor(extract_value<value_bool>(feature,attrs), text_prop.expressions.largest_bbox_only);
     prop->upright = util::apply_visitor(extract_value<text_upright_enum>(feature,attrs), text_prop.expressions.upright);
+    
+    prop->block_unchosen_placement = util::apply_visitor(extract_value<value_bool>(feature,attrs), text_prop.expressions.block_unchosen_placement);
+    
     return prop;
 }
 
@@ -110,6 +113,8 @@ void text_symbolizer_properties::text_properties_from_xml(xml_node const& node)
     set_property_from_xml<value_bool>(expressions.largest_bbox_only, "largest-bbox-only", node);
     set_property_from_xml<value_double>(expressions.max_char_angle_delta, "max-char-angle-delta", node);
     set_property_from_xml<text_upright_e>(expressions.upright, "upright", node);
+
+    set_property_from_xml<value_bool>(expressions.block_unchosen_placement, "block-unchosen-placement", node);
 }
 
 void text_symbolizer_properties::from_xml(xml_node const& node, fontset_map const& fontsets, bool is_shield)
@@ -199,7 +204,9 @@ void text_symbolizer_properties::add_expressions(expression_set & output) const
     if (is_expression(expressions.allow_overlap)) output.insert(util::get<expression_ptr>(expressions.allow_overlap));
     if (is_expression(expressions.largest_bbox_only)) output.insert(util::get<expression_ptr>(expressions.largest_bbox_only));
     if (is_expression(expressions.upright)) output.insert(util::get<expression_ptr>(expressions.upright));
-
+    
+    if (is_expression(expressions.block_unchosen_placement)) output.insert(util::get<expression_ptr>(expressions.block_unchosen_placement));
+    
     layout_defaults.add_expressions(output);
     format_defaults.add_expressions(output);
     if (tree_) tree_->add_expressions(output);

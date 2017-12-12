@@ -44,7 +44,7 @@ enum class keys : std::uint8_t
     before_first_point_y, 
     after_last_point_x, 
     after_last_point_y, 
-    see_all_offset_strokes, 
+    show_all_offset_strokes, 
     
     comp_op,
     clip,
@@ -105,6 +105,8 @@ enum class keys : std::uint8_t
     avoid_edges,
     ff_settings,
     extend,
+    
+    block_unchosen_placement, 
     MAX_SYMBOLIZER_KEY
 };
 

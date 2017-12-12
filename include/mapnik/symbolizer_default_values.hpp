@@ -85,7 +85,7 @@ struct symbolizer_default<value_bool, keys::there_is_one_following_offset>
     static value_bool value() { return false; }
 };
 template <>
-struct symbolizer_default<value_bool, keys::see_all_offset_strokes>
+struct symbolizer_default<value_bool, keys::show_all_offset_strokes>
 {
     static value_bool value() { return false; }
 };
@@ -391,6 +391,13 @@ struct symbolizer_default<value_double, keys::extend>
 {
     static value_double value() { return 0.0; }
 };
+
+template <>
+struct symbolizer_default<value_bool, keys::block_unchosen_placement>
+{
+    static value_bool value() { return false; }
+};
+
 
 } // namespace mapnik
 

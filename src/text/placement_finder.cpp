@@ -179,7 +179,14 @@ bool placement_finder::find_point_placement(pixel_position const& pos)
         bbox.re_center(layout_center.x, layout_center.y);
 
         /* For point placements it is faster to just check the bounding box. */
-        if (collision(bbox, layouts_.text(), false)) return false;
+	if (collision(bbox, layouts_.text(), false))
+	  {
+	    if (text_props_->block_unchosen_placement)
+	      {
+		detector_.insert(bbox);
+	      }
+	    return false;
+	  }
 
         if (layout.glyphs_count()) bboxes.push_back(std::move(bbox));
 

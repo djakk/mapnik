@@ -44,6 +44,17 @@ static const property_meta_type key_meta[const_max_key] =
                         },
                         property_types::target_pattern_alignment},
     property_meta_type{ "offset", nullptr, property_types::target_double},
+    
+    property_meta_type{ "there-is-one-previous-offset", nullptr, property_types::target_bool},
+    property_meta_type{ "there-is-one-following-offset", nullptr, property_types::target_bool},
+    property_meta_type{ "previous-offset", nullptr, property_types::target_double},
+    property_meta_type{ "following-offset", nullptr, property_types::target_double},
+    property_meta_type{ "before-first-point-x", nullptr, property_types::target_double},
+    property_meta_type{ "before-first-point-y", nullptr, property_types::target_double},
+    property_meta_type{ "after-last-point-x", nullptr, property_types::target_double},
+    property_meta_type{ "after-last-point-y", nullptr, property_types::target_double},
+    property_meta_type{ "show-all-offset-strokes", nullptr, property_types::target_bool},
+    
     property_meta_type{ "comp-op",
                         [](enumeration_wrapper e) { return *comp_op_to_string(composite_mode_e(e.value)); }, property_types::target_comp_op},
     property_meta_type{ "clip", nullptr, property_types::target_bool},
@@ -159,7 +170,8 @@ static const property_meta_type key_meta[const_max_key] =
     property_meta_type{ "avoid-edges",nullptr, property_types::target_bool },
     property_meta_type{ "font-feature-settings", nullptr, property_types::target_font_feature_settings },
     property_meta_type{ "extend", nullptr, property_types::target_double},
-
+    
+    property_meta_type{ "block-unchosen-placement", nullptr, property_types::target_bool},
 };
 
 property_meta_type const& get_meta(mapnik::keys key)
